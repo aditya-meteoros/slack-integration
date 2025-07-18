@@ -10,19 +10,16 @@ workflow = os.getenv("GITHUB_WORKFLOW", "unknown")
 status = os.getenv("JOB_STATUS", "").lower()
 event = os.getenv("EVENT_NAME", "")
 ref_name = os.getenv("REF_NAME", "")
-ref_type = os.getenv("CREATED_REF_TYPE", "")  # 'branch' or 'tag'
+ref_type = os.getenv("CREATED_REF_TYPE", "")
 
 if event == "create" and ref_type == "branch":
-    # Branch creation message
     message = (
         f":seedling: *New Branch Created!* \n"
         f"> *Branch:* `{ref_name}`\n"
         f"> *By:* `{actor}`\n"
         f"> *Repo:* `{repo}`"
     )
-
 elif event == "push":
-    # Push message with commit summary
     try:
         with open("commit_summary.txt") as f:
             commit_list = f.read().strip()
@@ -36,7 +33,6 @@ elif event == "push":
         f"*Changes:*\n{commit_list}\n\n"
     )
 
-    # Append status if it's a build
     if status:
         status_emoji = ":white_check_mark:" if status == "success" else ":x:"
         status_text = "SUCCEEDED" if status == "success" else "FAILED"
@@ -45,12 +41,9 @@ elif event == "push":
             f"> *Workflow:* {workflow}\n"
             f"> *Run:* https://github.com/{repo}/actions/runs/{run_id}"
         )
-
 else:
-    # Fallback message
     message = f":information_source: Unknown event `{event}` triggered by `{actor}` in `{repo}`"
 
-# Send to Slack
 response = requests.post(webhook_url, json={"text": message})
 if response.status_code != 200:
     print(f"Slack notification failed: {response.status_code} - {response.text}")

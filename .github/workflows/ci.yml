@@ -2,12 +2,12 @@ name: CI with Slack Alerts
 
 on:
   push:
-    branches: ["**"]  # All branches
-  create:             # Detect branch or tag creation
+    branches: ["**"]
+  create:
 
 jobs:
   build:
-    if: github.event_name == 'push'  # Only run on push, not on branch create
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       build_status: ${{ job.status }}
@@ -17,27 +17,26 @@ jobs:
       - name: Run build/test
         run: |
           echo "Running tests..."
-          exit 1  # Simulate failure (remove in real workflow)
+          exit 1  # Simulate failure
 
   notify:
     name: Slack Notify (Push + Branch Create + Build)
     needs: [build]
-    if: always() 
+    if: always()
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install requirements
+      - name: Install requests
         run: pip install requests
 
-      - name: Gather commit summary (only for push)
+      - name: Commit summary (only for push)
         if: github.event_name == 'push'
         run: |
           git log --pretty=format:"- %s (%an)" ${{ github.event.before }}..${{ github.sha }} > commit_summary.txt
