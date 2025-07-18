@@ -1,0 +1,57 @@
+name: CI with Slack Alerts
+
+on:
+  push:
+    branches: ["**"]  # All branches
+  create:             # Detect branch or tag creation
+
+jobs:
+  build:
+    if: github.event_name == 'push'  # Only run on push, not on branch create
+    runs-on: ubuntu-latest
+    outputs:
+      build_status: ${{ job.status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run build/test
+        run: |
+          echo "Running tests..."
+          exit 1  # Simulate failure (remove in real workflow)
+
+  notify:
+    name: Slack Notify (Push + Branch Create + Build)
+    needs: [build]
+    if: always() 
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install requirements
+        run: pip install requests
+
+      - name: Gather commit summary (only for push)
+        if: github.event_name == 'push'
+        run: |
+          git log --pretty=format:"- %s (%an)" ${{ github.event.before }}..${{ github.sha }} > commit_summary.txt
+
+      - name: Send Slack notification
+        run: python .github/scripts/slack_notify.py
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          JOB_STATUS: ${{ needs.build.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          CREATED_REF_TYPE: ${{ github.event.ref_type || '' }}
